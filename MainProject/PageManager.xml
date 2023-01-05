@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<PageManager>
+	<Page Name="All Data Pages" PageGUID="45365F9A-6A9B-4341-9222-D62BABF41FC5">
+		<Page Name="[Data Page] v_visitPixel" PageGUID="C82ECD5F-0DEA-4F70-856E-B8B3001B8885" Marked="true" />
+		<Page Name="[Data Page] v_linkPosition" PageGUID="D3CE7646-C2AE-4D39-940A-AE3F708B996F" Marked="true" />
+		<Page Name="[Data Page] p_log_config" PageGUID="461FA75F-924F-4B6F-8CA4-A6342B5DC6F4" Marked="true" />
+		<Page Name="[Data Page] p_fullPath" PageGUID="5E250337-C93D-40AD-8722-5B6B1D19A158" />
+	</Page>
+</PageManager>

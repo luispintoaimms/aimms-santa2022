@@ -1,0 +1,891 @@
+## ams_version=1.0
+
+Model Main_Santa_2022___The_Christmas_Card_Conundrum {
+	Section General {
+		Set s_links {
+			SubsetOf: Integers;
+			Index: i_link, i_link_aux;
+			Parameter: ep_link;
+			Property: ElementsAreNumerical;
+			InitialData: {
+				{1..4}
+			}
+		}
+		Set s_xGrid {
+			SubsetOf: Integers;
+			Index: i_xGrid, i_xGridAux;
+			Parameter: ep_xGrid;
+			Property: ElementsAreNumerical;
+		}
+		Set s_yGrid {
+			SubsetOf: Integers;
+			Index: i_yGrid, i_yGridAux;
+			Parameter: ep_yGrid;
+			Property: ElementsAreNumerical;
+		}
+		Set s_XY {
+			Index: i_XY;
+			Definition: {
+				{'X','Y'}
+			}
+		}
+		ElementParameter ep_X {
+			Range: s_XY;
+			Definition: 'X';
+		}
+		ElementParameter ep_Y {
+			Range: s_XY;
+			Definition: 'Y';
+		}
+		Set s_RGB {
+			Index: i_RGB;
+			Definition: data { R, G, B };
+		}
+		ElementParameter ep_R {
+			Range: s_RGB;
+			Definition: {
+				'R' ;
+			}
+		}
+		ElementParameter ep_G {
+			Range: s_RGB;
+			Definition: {
+				'G';
+			}
+		}
+		ElementParameter ep_B {
+			Range: s_RGB;
+			Definition: {
+				'B';
+			}
+		}
+		Set s_directions {
+			Index: i_direction;
+			Parameter: ep_direction;
+			Definition: {
+				data{'counter-clockwise', 'clockwise'};
+			}
+		}
+		ElementParameter ep_clockwise {
+			Range: s_directions;
+			Definition: {
+				'clockwise';
+			}
+		}
+		ElementParameter ep_counterclockwise {
+			Range: s_directions;
+			Definition: {
+				'counter-clockwise';
+			}
+		}
+		Parameter p_colours {
+			IndexDomain: (i_xGrid,i_yGrid,i_RGB);
+			Definition: {
+				if i_RGB = ep_R then
+				    p_loc_R(i_xGrid, i_yGrid)
+				elseif i_RGB = ep_G then
+				    p_loc_G(i_xGrid, i_yGrid)
+				elseif i_RGB = ep_B then
+				    p_loc_B(i_xGrid, i_yGrid)
+				endif;
+			}
+		}
+		Parameter p_loc_R {
+			IndexDomain: (i_xGrid,i_yGrid);
+		}
+		Parameter p_loc_G {
+			IndexDomain: (i_xGrid,i_yGrid);
+		}
+		Parameter p_loc_B {
+			IndexDomain: (i_xGrid,i_yGrid);
+		}
+		Procedure proc_importColors {
+			Body: {
+				dex::AddMapping(
+					mappingName :  "color", 
+					mappingFile :  "Mappings/inputs.xml");
+				
+				dex::ReadFromFile(
+					dataFile         :  "data/image.csv", 
+					mappingName      :  "color",);
+			}
+		}
+		Procedure proc_exportSubmissionFile {
+			Body: {
+				sp_fileName := "data/submission.csv";
+				PUT f_submission;
+				PUT "configuration";
+				PUT /;
+				for i_fullPath | 
+				        exists((i_link, i_XY) | 
+				            p_fullPath(i_fullPath, i_link, i_XY) 
+				            <> p_fullPath(i_fullPath+1, i_link, i_XY)) do
+				    for i_link do 
+				        PUT p_fullPath(i_fullPath, i_link, ep_X):0:0, " ";
+				        PUT p_fullPath(i_fullPath, i_link, ep_Y):0:0;
+				        PUT ";";
+				    endfor;
+				    PUT /;
+				endfor;
+				PUTCLOSE;
+			}
+			File f_submission {
+				Name: sp_fileName;
+				Device: Disk;
+				Mode: replace;
+			}
+			StringParameter sp_fileName;
+		}
+	}
+	Section Getting_started_with_Santa {
+		Function func_getPosition {
+			Arguments: (p_loc_config);
+			IndexDomain: i_XY;
+			Body: {
+				func_getPosition(i_XY) :=  sum(i_link, p_loc_config(i_link, i_XY));
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+		}
+		Function func_rotate {
+			Arguments: (p_loc_config,ep_loc_link,ep_loc_direction);
+			IndexDomain: (i_link, i_XY);
+			Body: {
+				p_loc_outConfig(i_link,i_XY) := p_loc_config(i_link, i_XY);
+				if ep_loc_direction = ep_counterclockwise then
+				    if 
+				        p_loc_config(ep_loc_link,ep_Y) >= p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) > -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_X) -= 1;
+				    elseif
+				        p_loc_config(ep_loc_link,ep_Y) > p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) <= -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_Y) -= 1;
+				    elseif 
+				        p_loc_config(ep_loc_link,ep_Y) <= p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) < -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_X) += 1;
+				    else
+				        p_loc_outConfig(ep_loc_link,ep_Y) += 1;
+				    endif;
+				elseif ep_loc_direction = ep_clockwise then    
+				    if 
+				        p_loc_config(ep_loc_link,ep_Y) > p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) >= -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_X) += 1;
+				    elseif
+				        p_loc_config(ep_loc_link,ep_Y) >= p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) < -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_Y) += 1;
+				    elseif 
+				        p_loc_config(ep_loc_link,ep_Y) < p_loc_config(ep_loc_link,ep_X) 
+				        and p_loc_config(ep_loc_link,ep_Y) <= -p_loc_config(ep_loc_link,ep_X) 
+				    then
+				        p_loc_outConfig(ep_loc_link,ep_X) -= 1;
+				    else
+				        p_loc_outConfig(ep_loc_link,ep_Y) -= 1;
+				    endif;
+				endif;
+				
+				func_rotate(i_link, i_XY) := p_loc_outConfig(i_link, i_XY);
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			ElementParameter ep_loc_link {
+				Range: s_links;
+				Property: Input;
+			}
+			ElementParameter ep_loc_direction {
+				Range: s_directions;
+				Property: Input;
+			}
+			Parameter p_loc_outConfig {
+				IndexDomain: (i_link,i_XY);
+			}
+		}
+		Procedure proc_reconfigurationCost {
+			Arguments: (p_loc_configFrom,p_loc_configTo);
+			Body: {
+				return Sqrt(
+				    sum((i_link,i_XY),
+				        abs(p_loc_configFrom(i_link, i_XY) - p_loc_configTo(i_link, i_XY))));
+			}
+			Parameter p_loc_configFrom {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_configTo {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+		}
+		Procedure proc_colorCost {
+			Arguments: (p_loc_positionFrom,p_loc_positionTo,p_loc_color,p_loc_colorScale);
+			Body: {
+				return sum(i_RGB,
+				            abs(p_loc_color(p_loc_positionFrom(ep_X), p_loc_positionFrom(ep_Y), i_RGB)
+				            - p_loc_color(p_loc_positionTo(ep_X), p_loc_positionTo(ep_Y), i_RGB)))
+				        * p_loc_colorScale;
+			}
+			Parameter p_loc_positionFrom {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+			Parameter p_loc_positionTo {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+			Parameter p_loc_color {
+				IndexDomain: (i_xGrid,i_yGrid,i_RGB);
+				Property: Input;
+			}
+			Parameter p_loc_colorScale {
+				Default: 3;
+				Property: Optional;
+			}
+		}
+		Procedure proc_stepCost {
+			Arguments: (p_loc_configFrom,p_loc_configTo);
+			Body: {
+				p_loc_positionFrom(i_XY) := func_getPosition(p_loc_configFrom)(i_XY);
+				p_loc_positionTo(i_XY) := func_getPosition(p_loc_configTo)(i_XY);
+				return proc_reconfigurationCost(p_loc_configFrom,p_loc_configTo)
+				    + proc_colorCost(p_loc_positionFrom, p_loc_positionTo, p_colours, 3);
+			}
+			Parameter p_loc_configFrom {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_configTo {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_positionFrom {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_positionTo {
+				IndexDomain: i_XY;
+			}
+		}
+		Function func_getDirection {
+			Arguments: (p_loc_v,p_loc_u);
+			Range: s_directions;
+			Body: {
+				!"""Returns the sign of the angle from u to v."""
+				
+				p_loc_cross := sign(p_loc_v(ep_x)*p_loc_u(ep_y) - p_loc_v(ep_y)*p_loc_u(ep_x));
+				if p_loc_cross > 0 then
+				    func_getDirection := ep_counterclockwise;
+				elseif p_loc_cross < 0 then
+				    func_getDirection := ep_clockwise;
+				elseif (p_loc_v(ep_x) <> p_loc_u(ep_X) or (p_loc_v(ep_y)<>p_loc_u(ep_x))) then
+				    func_getDirection := ep_clockwise;
+				!else
+				!    func_getDirection := '';
+				endif;
+			}
+			Parameter p_loc_v {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+			Parameter p_loc_u {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+			Parameter p_loc_cross;
+		}
+		Set s_pathToPoint {
+			SubsetOf: Integers;
+			Index: i_pathToPoint;
+			Parameter: ep_pathToPoint;
+			Property: ElementsAreNumerical;
+		}
+		Parameter p_pathToPoint {
+			IndexDomain: (i_pathToPoint,i_link,i_XY);
+		}
+		Procedure proc_getPathToPoint {
+			Arguments: (p_loc_config,p_loc_point,p_loc_startNumber);
+			Body: {
+				empty s_pathToPoint, p_pathToPoint;
+				cleanup s_pathToPoint, p_pathToPoint;
+				SetElementAdd(s_pathToPoint,ep_pathToPoint,p_loc_startNumber);
+				p_pathToPoint(ep_pathToPoint,i_link,i_XY) := p_loc_config(i_link, i_XY);
+				p_loc_visitedPoint(i_XY) := func_getPosition(p_loc_config)(i_XY);
+				p_visitedPoint(p_loc_visitedPoint(ep_X),p_loc_visitedPoint(ep_Y)) := 1;
+				
+				for i_link do
+				    p_loc_link(i_XY) := p_loc_config(i_link,i_XY);
+				    p_loc_configAux(i_link_aux,i_XY) :=  p_loc_config(i_link_aux, i_XY) $ (i_link_aux < i_link);
+				    p_loc_base(i_XY) := func_getPosition(p_loc_configAux)(i_XY);
+				    p_loc_relativeBase(i_XY) := p_loc_point(i_XY) - p_loc_base(i_XY);
+				    p_loc_configAux(i_link_aux,i_XY) :=  p_loc_config(i_link_aux, i_XY) $ (i_link_aux <= i_link);
+				    p_loc_position(i_XY) := func_getPosition(p_loc_configAux)(i_XY);
+				    p_loc_relativePosition(i_XY) := p_loc_point(i_XY) - p_loc_position(i_XY);
+				    p_loc_radius := sum(i_link_aux | i_link_aux > i_link, max(i_XY, abs(p_loc_config(i_link_aux, i_XY))));
+				    if p_loc_radius = 1 and (p_loc_relativePosition(ep_X) = 0 and p_loc_relativePosition(ep_Y) = 0) then
+				        p_loc_config(i_link_aux, i_XY) := func_rotate(p_loc_config,i_link,'clockwise')(i_link_aux, i_XY);
+				        if forall(i_XY, func_getPosition(p_loc_config)(i_XY) = p_loc_point(i_XY)) then
+				            SetElementAdd(s_pathToPoint,ep_pathToPoint,last(i_pathToPoint)+1);
+				            p_pathToPoint(ep_pathToPoint,i_link_aux,i_XY) := p_loc_config(i_link_aux, i_XY);
+				            p_loc_visitedPoint(i_XY) := func_getPosition(p_loc_config)(i_XY);
+				            p_visitedPoint(p_loc_visitedPoint(ep_X),p_loc_visitedPoint(ep_Y)) := 1;
+				            break;
+				        else
+				            skip;
+				        endif;
+				    endif; 
+				    while max(i_XY,abs(p_loc_relativePosition(i_XY))) > p_loc_radius do
+				        ep_direction := func_getDirection(p_loc_link,p_loc_relativeBase);
+				        p_loc_config(i_link_aux, i_XY) := func_rotate(p_loc_config,i_link,ep_direction)(i_link_aux,i_XY);
+				        SetElementAdd(s_pathToPoint,ep_pathToPoint,last(i_pathToPoint)+1);
+				        p_pathToPoint(ep_pathToPoint,i_link_aux,i_XY) := p_loc_config(i_link_aux, i_XY);
+				        p_loc_visitedPoint(i_XY) := func_getPosition(p_loc_config)(i_XY);
+				        p_visitedPoint(p_loc_visitedPoint(ep_X),p_loc_visitedPoint(ep_Y)) := 1;
+				        p_loc_link(i_XY) := p_loc_config(i_link,i_XY);
+				        p_loc_configAux(i_link_aux,i_XY) :=  p_loc_config(i_link_aux, i_XY) $ (i_link_aux < i_link);
+				        p_loc_base(i_XY) := func_getPosition(p_loc_configAux)(i_XY);
+				        p_loc_relativeBase(i_XY) := p_loc_point(i_XY) - p_loc_base(i_XY);
+				        p_loc_configAux(i_link_aux,i_XY) :=  p_loc_config(i_link_aux, i_XY) $ (i_link_aux <= i_link);
+				        p_loc_position(i_XY) := func_getPosition(p_loc_configAux)(i_XY);
+				        p_loc_relativePosition(i_XY) := p_loc_point(i_XY) - p_loc_position(i_XY);
+				        p_loc_radius 
+				        := sum(i_link_aux | i_link_aux > i_link, 
+				                max(i_XY, abs(p_loc_config(i_link_aux, i_XY))));
+				    endwhile;         
+				endfor;
+				
+				if exists(i_XY | func_getPosition(p_loc_config)(i_XY) <> p_loc_point(i_XY)) then
+				    RAISE ERROR "proc_getPathToPoint did not find a path";
+				endif;
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_point {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+			Parameter p_loc_link {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_path {
+				IndexDomain: (i_pathToPoint,i_link,i_XY);
+			}
+			Parameter p_loc_base {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_relativeBase {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_configAux {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_position {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_relativePosition {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_radius;
+			Parameter p_loc_startNumber {
+				Default: 1;
+				Property: Optional;
+			}
+			Parameter p_loc_visitedPoint {
+				IndexDomain: i_XY;
+				Property: Input;
+			}
+		}
+		Set s_pathToConfig {
+			SubsetOf: Integers;
+			Index: i_pathToConfig;
+			Parameter: ep_pathToConfig;
+			Property: ElementsAreNumerical;
+		}
+		Parameter p_pathToConfig {
+			IndexDomain: (i_pathToConfig,i_link,i_XY);
+		}
+		Procedure proc_getPathToConfig {
+			Arguments: (p_loc_configFrom,p_loc_configTo);
+			Body: {
+				empty s_pathToConfig, p_pathToConfig;
+				SetElementAdd(s_pathToConfig,ep_pathToConfig,card(s_pathToConfig)+1);
+				p_pathToConfig(ep_pathToConfig,i_link,i_XY) := p_loc_configFrom(i_link, i_XY);
+				
+				while 
+				    exists((i_link,i_XY) | 
+				        p_loc_configFrom(i_link, i_XY) <> p_loc_configTo(i_link, i_XY))
+				do
+				    for i_link | exists(i_XY | p_loc_configFrom(i_link, i_XY) <> p_loc_configTo(i_link, i_XY)) do
+				        p_loc_linkFrom(i_XY) := p_loc_configFrom(i_link, i_XY);
+				        p_loc_linkTo(i_XY) := p_loc_configTo(i_link, i_XY);
+				        p_loc_configFrom(i_link_aux, i_XY) := func_rotate(p_loc_configFrom,i_link, 
+					        func_getDirection(p_loc_linkFrom,p_loc_linkTo))(i_link_aux,i_XY);
+					    SetElementAdd(s_pathToConfig,ep_pathToConfig,card(s_pathToConfig)+1);
+				        p_pathToConfig(ep_pathToConfig,i_link_aux,i_XY) := p_loc_configFrom(i_link_aux, i_XY);
+					endfor;
+				endwhile;
+				
+				if exists((i_link, i_XY) | p_loc_configFrom(i_link, i_XY) <> p_loc_configTo(i_link, i_XY)) then
+				    RAISE ERROR "func_getPathToConfiguration did not find a path";
+				endif;
+			}
+			Parameter p_loc_configFrom {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_configTo {
+				IndexDomain: (i_link,i_XY);
+				Property: Input;
+			}
+			Parameter p_loc_linkFrom {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_linkTo {
+				IndexDomain: i_XY;
+			}
+		}
+	}
+	Section Demo {
+		Procedure proc_demoGetPosition {
+			Body: {
+				s_links := {1..4};
+				
+				p_loc_config(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 4,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -2,  ( 2, Y ) : 2,  
+				        ( 3, X ) : -1,  ( 3, Y ) : 0,  
+				        ( 4, X ) : -1,  ( 4, Y ) : 1 };
+				
+				p_loc_position(i_XY) := func_getPosition(p_loc_config)(i_XY);
+				
+				if 
+				    (p_loc_position(ep_X) <> 0 or
+				    p_loc_position(ep_Y) <> 2) then
+				    RAISE ERROR "func_getPosition not returning expected position";
+				endif ;
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_position {
+				IndexDomain: i_XY;
+			}
+		}
+		Procedure proc_demoRotate {
+			Body: {
+				s_links := {1..4};
+				
+				p_loc_config(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 4,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -2,  ( 2, Y ) : 2,  
+				        ( 3, X ) : -1,  ( 3, Y ) : 0,  
+				        ( 4, X ) : -1,  ( 4, Y ) : 1 };
+				
+				for i_loc_step do
+				    p_loc_configSteps(i_loc_step,i_link,i_XY)
+					:=  p_loc_config(i_link, i_XY);
+				    p_loc_config(i_link, i_XY) 
+				    :=  func_rotate(p_loc_config,2,ep_counterclockwise)(i_link, i_XY);
+				endfor;
+				
+				if 
+				    sum((i_loc_step,i_link,i_XY),
+				        abs(p_loc_validSteps(i_loc_step,i_link,i_XY)
+				        - p_loc_configSteps(i_loc_step,i_link,i_XY))) > 0
+				then
+				    RAISE ERROR "func_rotate not returning expected position";
+				endif;
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+			}
+			Set s_loc_steps {
+				SubsetOf: Integers;
+				Index: i_loc_step;
+				InitialData: {
+					{1..16};
+				}
+			}
+			Parameter p_loc_configSteps {
+				IndexDomain: (i_loc_step,i_link,i_XY);
+			}
+			Parameter p_loc_validSteps {
+				IndexDomain: (i_loc_step,i_link,i_XY);
+				InitialData: {
+					data 
+					{ (  1, 1, X ) :  4,  (  1, 2, X ) : -2,  (  1, 2, Y ) :  2,  (  1, 3, X ) : -1,  (  1, 4, X ) : -1,  (  1, 4, Y ) :  1,
+					  (  2, 1, X ) :  4,  (  2, 2, X ) : -2,  (  2, 2, Y ) :  1,  (  2, 3, X ) : -1,  (  2, 4, X ) : -1,  (  2, 4, Y ) :  1,
+					  (  3, 1, X ) :  4,  (  3, 2, X ) : -2,  (  3, 3, X ) : -1,  (  3, 4, X ) : -1,  (  3, 4, Y ) :  1,  (  4, 1, X ) :  4,
+					  (  4, 2, X ) : -2,  (  4, 2, Y ) : -1,  (  4, 3, X ) : -1,  (  4, 4, X ) : -1,  (  4, 4, Y ) :  1,  (  5, 1, X ) :  4,
+					  (  5, 2, X ) : -2,  (  5, 2, Y ) : -2,  (  5, 3, X ) : -1,  (  5, 4, X ) : -1,  (  5, 4, Y ) :  1,  (  6, 1, X ) :  4,
+					  (  6, 2, X ) : -1,  (  6, 2, Y ) : -2,  (  6, 3, X ) : -1,  (  6, 4, X ) : -1,  (  6, 4, Y ) :  1,  (  7, 1, X ) :  4,
+					  (  7, 2, Y ) : -2,  (  7, 3, X ) : -1,  (  7, 4, X ) : -1,  (  7, 4, Y ) :  1,  (  8, 1, X ) :  4,  (  8, 2, X ) :  1,
+					  (  8, 2, Y ) : -2,  (  8, 3, X ) : -1,  (  8, 4, X ) : -1,  (  8, 4, Y ) :  1,  (  9, 1, X ) :  4,  (  9, 2, X ) :  2,
+					  (  9, 2, Y ) : -2,  (  9, 3, X ) : -1,  (  9, 4, X ) : -1,  (  9, 4, Y ) :  1,  ( 10, 1, X ) :  4,  ( 10, 2, X ) :  2,
+					  ( 10, 2, Y ) : -1,  ( 10, 3, X ) : -1,  ( 10, 4, X ) : -1,  ( 10, 4, Y ) :  1,  ( 11, 1, X ) :  4,  ( 11, 2, X ) :  2,
+					  ( 11, 3, X ) : -1,  ( 11, 4, X ) : -1,  ( 11, 4, Y ) :  1,  ( 12, 1, X ) :  4,  ( 12, 2, X ) :  2,  ( 12, 2, Y ) :  1,
+					  ( 12, 3, X ) : -1,  ( 12, 4, X ) : -1,  ( 12, 4, Y ) :  1,  ( 13, 1, X ) :  4,  ( 13, 2, X ) :  2,  ( 13, 2, Y ) :  2,
+					  ( 13, 3, X ) : -1,  ( 13, 4, X ) : -1,  ( 13, 4, Y ) :  1,  ( 14, 1, X ) :  4,  ( 14, 2, X ) :  1,  ( 14, 2, Y ) :  2,
+					  ( 14, 3, X ) : -1,  ( 14, 4, X ) : -1,  ( 14, 4, Y ) :  1,  ( 15, 1, X ) :  4,  ( 15, 2, Y ) :  2,  ( 15, 3, X ) : -1,
+					  ( 15, 4, X ) : -1,  ( 15, 4, Y ) :  1,  ( 16, 1, X ) :  4,  ( 16, 2, X ) : -1,  ( 16, 2, Y ) :  2,  ( 16, 3, X ) : -1,
+					  ( 16, 4, X ) : -1,  ( 16, 4, Y ) :  1 }
+				}
+			}
+		}
+		Procedure proc_demoCost {
+			Body: {
+				proc_importColors;
+				
+				s_links
+				:=  {1..4};
+				
+				p_loc_configFrom(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 4,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -2,  ( 2, Y ) : 2,  
+				        ( 3, X ) : -1,  ( 3, Y ) : 0,  
+				        ( 4, X ) : -1,  ( 4, Y ) : 1 };
+				p_loc_configFrom(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 4,   ( 1, Y ) : 1,  
+				        ( 2, X ) : -2,  ( 2, Y ) : 1,  
+				        ( 3, X ) : -1,  ( 3, Y ) : 1,  
+				        ( 4, X ) : -1,  ( 4, Y ) : 0 };
+				p_loc_cost := Round(proc_stepCost(p_loc_configFrom, p_loc_configTo),3);
+				if p_loc_cost  <> 4.211 then
+				    RAISE ERROR "proc_stepCost didn't calculate the correct cost";
+				endif;
+			}
+			Parameter p_loc_configFrom {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_configTo {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_cost;
+		}
+		Procedure proc_demoPathToPoint {
+			Body: {
+				s_links := {1..2};
+				
+				p_loc_config(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 1,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -1,  ( 2, Y ) : 0};
+				
+				p_loc_point(i_XY)
+				:= data { X: -2, Y: -2 };
+				
+				proc_getPathToPoint(p_loc_config, p_loc_point, 1);
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_point {
+				IndexDomain: i_XY;
+			}
+		}
+		Procedure proc_demoPathToConfig {
+			Body: {
+				s_links := {1..2};
+				
+				p_loc_configFrom(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 1,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -1,  ( 2, Y ) : 0};
+				
+				
+				p_loc_configTo(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : -1,   ( 1, Y ) : 1,  
+				        ( 2, X ) : -1,  ( 2, Y ) : -1};
+				
+				proc_getPathToConfig(p_loc_configFrom, p_loc_configTo);
+			}
+			Parameter p_loc_configFrom {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_configTo {
+				IndexDomain: (i_link,i_XY);
+			}
+		}
+		DeclarationSection Demo_Full_Path {
+			Set s_demoFullPath {
+				SubsetOf: Integers;
+				Index: i_demoFullPath, i_demoFullPathAux;
+				Parameter: ep_DemoFullPath;
+				Property: ElementsAreNumerical;
+				Definition: {
+					if p_sizeDemoFullPath > 0 then
+					    {1..p_sizeDemoFullPath}
+					endif
+				}
+			}
+			Parameter p_sizeDemoFullPath;
+			Parameter p_demoFullPath {
+				IndexDomain: (i_demoFullPath,i_link,i_XY);
+			}
+		}
+		Procedure proc_demoFullPath {
+			Body: {
+				proc_importColors;
+				s_links := {1..2};
+				
+				p_loc_configStart(i_link,i_XY)
+				:=  data { 
+				        ( 1, X ) : 1,   ( 1, Y ) : 0,  
+				        ( 2, X ) : -1,  ( 2, Y ) : 0};
+				
+				p_sizeDemoFullPath := 1;
+				ep_DemoFullPath := Last(s_demoFullPath);
+				p_demoFullPath(ep_DemoFullPath, i_link, i_XY) := p_loc_configStart(i_link, i_XY);
+				
+				p_loc_maxSize := sum(i_link, max(i_XY, abs(p_loc_configStart(i_link,i_XY))));
+				s_loc_grid := {-p_loc_maxSize..p_loc_maxSize};
+				for (i_loc_grid,i_loc_gridAux) do
+				    p_loc_point(ep_X) := i_loc_grid;
+				    p_loc_point(ep_Y) := i_loc_gridAux;
+				    ep_DemoFullPath := Last(s_demoFullPath);
+				    p_loc_config(i_link, i_XY) := p_demoFullPath(ep_DemoFullPath, i_link, i_XY);
+				    proc_getPathToPoint(p_loc_config,p_loc_point,ep_DemoFullPath);
+				    p_sizeDemoFullPath := p_sizeDemoFullPath + card(s_pathToPoint);
+				    p_demoFullPath(i_demoFullPath, i_link, i_XY) | (i_demoFullPath > ep_DemoFullPath)
+				    :=  p_pathToPoint(i_demoFullPath - ep_DemoFullPath, i_link, i_XY);
+				endfor;
+				
+				p_loc_point(i_XY) := data{X: 0, Y: 0};
+				ep_DemoFullPath := Last(s_demoFullPath);
+				p_loc_config(i_link, i_XY) := p_demoFullPath(ep_DemoFullPath, i_link, i_XY);
+				proc_getPathToConfig(p_loc_config,p_loc_configStart);
+				p_sizeDemoFullPath := p_sizeDemoFullPath + card(s_pathToConfig);
+				p_demoFullPath(i_demoFullPath, i_link, i_XY) | (i_demoFullPath > ep_DemoFullPath)
+				:=  p_pathToConfig(i_demoFullPath - ep_DemoFullPath, i_link, i_XY);
+				
+				for i_demoFullPath | i_demoFullPath < card(s_demoFullPath) do
+				    p_loc_config(i_link, i_XY) := p_demoFullPath(i_demoFullPath, i_link, i_XY);
+				    p_loc_configAux(i_link,i_XY) := p_demoFullPath(i_demoFullPath+1, i_link, i_XY);
+				    p_loc_totalCost
+				    +=  proc_stepCost(p_loc_config,p_loc_configAux);
+				endfor;
+				
+				if round(p_loc_totalCost,2) <> 62.59 then
+				    raise error "Total cost of demo path is incorrect";
+				endif;
+			}
+			Parameter p_loc_maxSize;
+			Set s_loc_grid {
+				SubsetOf: Integers;
+				Index: i_loc_grid, i_loc_gridAux;
+				Property: ElementsAreNumerical;
+			}
+			Parameter p_loc_config {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_configAux {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_configStart {
+				IndexDomain: (i_link,i_XY);
+			}
+			Parameter p_loc_point {
+				IndexDomain: i_XY;
+			}
+			Parameter p_loc_totalCost;
+		}
+	}
+	Procedure MainInitialization {
+		Comment: "Add initialization statements here that do NOT require any library being initialized already.";
+	}
+	Procedure PostMainInitialization {
+		Comment: {
+			"Add initialization statements here that require that the libraries are already initialized properly,
+			or add statements that require the Data Management module to be initialized."
+		}
+	}
+	Set s_fullPath {
+		SubsetOf: Integers;
+		Index: i_fullPath, i_fullPathAux;
+		Parameter: ep_fullPath;
+		Property: ElementsAreNumerical;
+		Definition: ElementRange(1,max(p_sizeFullPath,1));
+	}
+	Parameter p_sizeFullPath;
+	Parameter p_fullPath {
+		IndexDomain: (i_fullPath,i_link,i_XY);
+	}
+	Parameter p_totalCost;
+	Parameter p_visitedPoint {
+		IndexDomain: (i_xGrid,i_yGrid);
+	}
+	Set s_regions {
+		Index: i_region;
+		Parameter: ep_region;
+	}
+	Parameter p_regionMinX {
+		IndexDomain: i_region;
+		Range: integer;
+	}
+	Parameter p_regionMaxX {
+		IndexDomain: i_region;
+		Range: integer;
+	}
+	Parameter p_regionMinY {
+		IndexDomain: i_region;
+		Range: integer;
+	}
+	Parameter p_regionMaxY {
+		IndexDomain: i_region;
+		Range: integer;
+	}
+	Procedure MainExecution {
+		Body: {
+			empty p_sizeFullPath,p_fullPath,p_totalCost,p_visitedPoint;
+			
+			proc_importColors;
+			s_links := {1..8};
+			
+			p_loc_configStart(i_link,i_XY)
+			:=  data {
+			        ( 1, X ) : 64,   ( 1, Y ) : 0,  
+			        ( 2, X ) : -32,  ( 2, Y ) : 0,
+			        ( 3, X ) : -16,  ( 3, Y ) : 0,
+			        ( 4, X ) : -8,   ( 4, Y ) : 0,
+			        ( 5, X ) : -4,   ( 5, Y ) : 0,
+			        ( 6, X ) : -2,   ( 6, Y ) : 0,
+			        ( 7, X ) : -1,   ( 7, Y ) : 0,
+			        ( 8, X ) : -1,   ( 8, Y ) : 0
+			        };
+			
+			p_sizeFullPath := 1;
+			ep_fullPath := Last(s_FullPath);
+			p_fullPath(ep_fullPath, i_link, i_XY) := p_loc_configStart(i_link, i_XY);
+			
+			p_loc_maxSize := sum(i_link, max(i_XY, abs(p_loc_configStart(i_link,i_XY))));
+			s_loc_grid := {-p_loc_maxSize..p_loc_maxSize};
+			
+			s_regions := {1..16};
+			p_regionMinX(i_region)
+			:=  data { 1: 0,  2: 0,  3 : 64,  4 : 64,  5 : 64,  6 : 64,  7: 0,  8: 0,  9 : -64,  10 : -64,  11 : -128,  12 : -128,  13 : -128,  14 : -128,  15 : -64,  16 : -64 };
+			p_regionMaxX(i_region)
+			:=  data data { 1 : 64,  2 : 64,  3 : 128,  4 : 128,  5 : 128,  6 : 128,  7 : 64,  8 : 64,  9: 0,  10: 0,  11 : -64,  12 : -64,  13 : -64,  14 : -64,  15: 0, 16: 0 };
+			p_regionMinY(i_region)
+			:=  data data { 1: 0,   2 : 64,  3 : 64,  4: 0,  5 : -64,  6 : -128,  7 : -128,  8 : -64,  9 : -64,  10 : -128,  11 : -128,  12 : -64,  14 : 64,  15 : 64,  16: 0};
+			p_regionMaxY(i_region)
+			:=  data { 1 : 64,  2 : 128,  3 : 128,  4 : 64,  5: 0,  6 : -64,  7 : -64,  8: 0,  9: 0,  10 : -64,  11 : -64,  12: 0,  13 : 64,  14 : 128,  15 : 128,  16 : 64 };
+			
+			for i_region do
+			    for 
+			        (i_loc_grid,i_loc_gridAux) |
+			            (p_regionMinX(i_region) <= i_loc_grid <= p_regionMaxX(i_region))
+			            and (p_regionMinY(i_region) <= i_loc_gridAux <= p_regionMaxY(i_region))
+			    do
+			        if p_visitedPoint(i_loc_grid, i_loc_gridAux) then
+			            skip;
+			        endif;
+			        p_loc_point(ep_X) := i_loc_grid;
+			        p_loc_point(ep_Y) := i_loc_gridAux;
+			        ep_fullPath := Last(s_fullPath);
+			        p_loc_config(i_link, i_XY) := p_fullPath(ep_fullPath, i_link, i_XY);
+			        proc_getPathToPoint(p_loc_config,p_loc_point,ep_fullPath);
+			        p_sizeFullPath := p_sizeFullPath + card(s_pathToPoint) - 1;
+			        !ep_loc_pathToPath(i_fullPath) | (i_fullPath > ep_fullPath) 
+			        !:=  i_fullPath - Val(ep_fullPath);
+			        p_fullPath(i_pathToPoint, i_link, i_XY)
+			        :=  p_pathToPoint(i_pathToPoint, i_link, i_XY);
+			    endfor;
+			endfor;
+			
+			p_loc_point(i_XY) := data{X: 0, Y: 0};
+			ep_fullPath := Last(s_fullPath);
+			p_loc_config(i_link, i_XY) := p_fullPath(ep_fullPath, i_link, i_XY);
+			proc_getPathToConfig(p_loc_config,p_loc_configStart);
+			p_sizefullPath := p_sizefullPath + card(s_pathToConfig);
+			p_fullPath(i_fullPath, i_link, i_XY) | (i_fullPath > ep_fullPath)
+			:=  p_pathToConfig(i_fullPath - ep_fullPath, i_link, i_XY);
+			
+			
+			proc_exportSubmissionFile;
+		}
+		Parameter p_loc_maxSize;
+		Set s_loc_grid {
+			SubsetOf: Integers;
+			Index: i_loc_grid, i_loc_gridAux, i_loc_gridX, i_loc_gridY;
+			Property: ElementsAreNumerical;
+		}
+		Parameter p_loc_config {
+			IndexDomain: (i_link,i_XY);
+		}
+		Parameter p_loc_configAux {
+			IndexDomain: (i_link,i_XY);
+		}
+		Parameter p_loc_configStart {
+			IndexDomain: (i_link,i_XY);
+		}
+		Parameter p_loc_point {
+			IndexDomain: i_XY;
+		}
+		ElementParameter ep_loc_pathToPath {
+			IndexDomain: i_fullPath;
+			Range: s_pathToPoint;
+		}
+		Parameter p_loc_visitedPoint {
+			IndexDomain: (i_loc_grid,i_loc_gridAux);
+		}
+		Set s_loc_fullPathRemove {
+			SubsetOf: s_fullPath;
+			Index: i_loc_fullPathRemove;
+			Parameter: ep_loc_fullPathRemove;
+		}
+	}
+	Procedure PreMainTermination {
+		Body: {
+			return DataManagementExit();
+		}
+		Comment: {
+			"Add termination statements here that require all libraries to be still alive.
+			Return 1 if you allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence."
+		}
+	}
+	Procedure MainTermination {
+		Body: {
+			return 1;
+		}
+		Comment: {
+			"Add termination statements here that do not require all libraries to be still alive.
+			Return 1 to allow the termination sequence to continue.
+			Return 0 if you want to cancel the termination sequence.
+			It is recommended to only use the procedure PreMainTermination to cancel the termination sequence and let this procedure always return 1."
+		}
+	}
+	Section Quantities_and_Units {
+		Comment: {
+			"This section contains all the units and quantities that are added automatically by AIMMS.
+			It is recommended to declare all your quantities here."
+		}
+		Quantity SI_Time_Duration {
+			BaseUnit: s;
+			Conversions: minute->s : #-># * 60;
+			Comment: {
+				"Expresses the value for the duration of periods.
+				
+				The unit s has been added automatically because it is a required unit for AimmsWebUI.
+				
+				The unit minute has been added automatically because it is a required unit for AimmsWebUI."
+			}
+		}
+	}
+}

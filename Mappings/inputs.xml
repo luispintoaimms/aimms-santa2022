@@ -1,0 +1,9 @@
+<AimmsCSVMapping>
+	<RowMapping name="Colors">
+		<ColumnMapping name="x" binds-to="i_xGrid"/>
+		<ColumnMapping name="y" binds-to="i_yGrid"/>
+		<ColumnMapping name="r" maps-to="p_loc_R(i_xGrid,i_yGrid)"/>
+		<ColumnMapping name="g" maps-to="p_loc_g(i_xGrid,i_yGrid)"/>
+		<ColumnMapping name="b" maps-to="p_loc_b(i_xGrid,i_yGrid)"/>
+	</RowMapping>
+</AimmsCSVMapping>
